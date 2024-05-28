@@ -1,0 +1,37 @@
+---
+- name: Install common packages
+  ansible.builtin.package:
+    name:
+      - cryptsetup-2:2.4.3
+    state: present
+    update_cache: true
+
+- name: Format the second disk with LUKS
+  community.crypto.luks_device:
+    device: "{{ second_disk }}"
+    state: "opened"
+    name: "second"
+    passphrase: "{{ passphrase }}"
+  when: second_disk is defined
+
+- name: Create filesystem on encrypted disk
+  filesystem:
+    fstype: ext4
+    dev: "{{ second_disk }}"
+  when: second_disk is defined
+
+- name: Get root partition
+  ansible.builtin.shell: /usr/sbin/fdisk -l /dev/xvda -o device | grep "^/dev" | sed -n 2p
+  register: root_disk
+
+- name: Format the second disk with LUKS
+  community.crypto.luks_device:
+    device: "{{ root_disk.stdout }}"
+    state: "opened"
+    name: "root"
+    passphrase: "{{ passphrase }}"
+
+- name: Create filesystem on encrypted root adjacent partition
+  filesystem:
+    fstype: ext4
+    dev: "{{ root_disk.stdout }}"

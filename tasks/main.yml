@@ -1,0 +1,4 @@
+---
+- name: Encrypt
+  include_tasks: encrypt.yml
+  tags: encrypt
