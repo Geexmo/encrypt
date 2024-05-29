@@ -2,7 +2,7 @@
 - name: Install common packages
   ansible.builtin.package:
     name:
-      - cryptsetup-2:2.4.3
+      - cryptsetup
     state: present
     update_cache: true
 
@@ -17,21 +17,21 @@
 - name: Create filesystem on encrypted disk
   filesystem:
     fstype: ext4
-    dev: "{{ second_disk }}"
+    dev: /dev/mapper/second
   when: second_disk is defined
 
 - name: Get root partition
   ansible.builtin.shell: /usr/sbin/fdisk -l /dev/xvda -o device | grep "^/dev" | sed -n 2p
   register: root_disk
+  changed_when: false
 
-- name: Format the second disk with LUKS
-  community.crypto.luks_device:
-    device: "{{ root_disk.stdout }}"
-    state: "opened"
-    name: "root"
-    passphrase: "{{ passphrase }}"
+- name: Encrypt the root adjacent partition
+  ansible.builtin.command:
+    cmd: echo "YES" | cryptsetup luksFormat {{ root_disk.stdout }}
+  changed_when: false
 
-- name: Create filesystem on encrypted root adjacent partition
-  filesystem:
-    fstype: ext4
-    dev: "{{ root_disk.stdout }}"
+# Unable to use crypto.luks_device because of the size of partition 4Mb. There is no luks2-metadata-size parametr in module so task fails with error "Requested offset is beyond real size of device".
+- name: Open the encrypted root adjacent partition
+  ansible.builtin.command:
+    cmd: echo "YES" | cryptsetup open {{ root_disk.stdout }} encrypted_root_adjacent
+  changed_when: false

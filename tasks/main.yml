@@ -1,4 +1,4 @@
 ---
 - name: Encrypt
-  include_tasks: encrypt.yml
+  ansible.builtin.include_tasks: encrypt.yml
   tags: encrypt
